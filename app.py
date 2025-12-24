@@ -4,16 +4,21 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+
 # --------------------------------------------------
-# CONFIG
+# APP CONFIG
 # --------------------------------------------------
-st.set_page_config(page_title="NIFTY Fundamental Valuation Dashboard",
-                   layout="wide")
+st.set_page_config(
+    page_title="NIFTY Fundamental Valuation Dashboard",
+    layout="wide"
+)
 
 SECTOR_PE_AVG = 25
 
 # --------------------------------------------------
-# NSE INDEX STOCK LISTS
+# INDEX STOCK LISTS (50–250)
 # --------------------------------------------------
 NIFTY_50 = [
     "ADANIENT.NS","ADANIPORTS.NS","APOLLOHOSP.NS","ASIANPAINT.NS","AXISBANK.NS",
@@ -29,49 +34,37 @@ NIFTY_50 = [
 ]
 
 NIFTY_NEXT_50 = [
-    "ABB.NS","ACC.NS","ADANIGREEN.NS","ADANITRANS.NS","AMBUJACEM.NS",
-    "AUBANK.NS","BANDHANBNK.NS","BERGEPAINT.NS","BOSCHLTD.NS","CANBK.NS",
-    "CHOLAFIN.NS","COLPAL.NS","DLF.NS","GAIL.NS","GODREJCP.NS",
-    "HAVELLS.NS","ICICIPRULI.NS","IGL.NS","INDIGO.NS","JINDALSTEL.NS",
-    "LICHSGFIN.NS","LUPIN.NS","MARICO.NS","MOTHERSUMI.NS","NMDC.NS",
-    "OFSS.NS","PAGEIND.NS","PETRONET.NS","PIDILITIND.NS","PNB.NS",
-    "SIEMENS.NS","SRF.NS","TORNTPHARM.NS","TVSMOTOR.NS","UBL.NS",
-    "VEDL.NS","VOLTAS.NS","ZEEL.NS"
+    "ABB.NS","ACC.NS","ADANIGREEN.NS","AMBUJACEM.NS","AUBANK.NS","BANDHANBNK.NS",
+    "BERGEPAINT.NS","BOSCHLTD.NS","CANBK.NS","CHOLAFIN.NS","COLPAL.NS","DLF.NS",
+    "GAIL.NS","GODREJCP.NS","HAVELLS.NS","ICICIPRULI.NS","IGL.NS","INDIGO.NS",
+    "JINDALSTEL.NS","LICHSGFIN.NS","LUPIN.NS","MARICO.NS","NMDC.NS","OFSS.NS",
+    "PAGEIND.NS","PETRONET.NS","PIDILITIND.NS","PNB.NS","SIEMENS.NS","SRF.NS",
+    "TORNTPHARM.NS","TVSMOTOR.NS","UBL.NS","VEDL.NS","VOLTAS.NS","ZEEL.NS"
 ]
 
 NIFTY_101_150 = [
-    "ABFRL.NS","ALKEM.NS","ASHOKLEY.NS","ASTRAL.NS","ATUL.NS",
-    "AUROPHARMA.NS","BATAINDIA.NS","BEL.NS","BHARATFORG.NS","BIRLACORPN.NS",
-    "CESC.NS","COFORGE.NS","COROMANDEL.NS","CROMPTON.NS","DEEPAKNTR.NS",
-    "ESCORTS.NS","EXIDEIND.NS","FEDERALBNK.NS","GLENMARK.NS","GNFC.NS",
-    "HDFCAMC.NS","IDFCFIRSTB.NS","IPCALAB.NS","IRCTC.NS","JUBLFOOD.NS",
-    "KANSAINER.NS","LALPATHLAB.NS","LTTS.NS","MFSL.NS","MPHASIS.NS",
-    "NAM-INDIA.NS","OBEROIRLTY.NS","POLYCAB.NS","PRESTIGE.NS","RAMCOCEM.NS",
-    "SAIL.NS","SUNTV.NS","TRENT.NS","UNITDSPR.NS","ZYDUSLIFE.NS"
+    "ABFRL.NS","ALKEM.NS","ASHOKLEY.NS","ASTRAL.NS","AUROPHARMA.NS","BATAINDIA.NS",
+    "BEL.NS","BHARATFORG.NS","COFORGE.NS","COROMANDEL.NS","CROMPTON.NS",
+    "DEEPAKNTR.NS","ESCORTS.NS","EXIDEIND.NS","FEDERALBNK.NS","HDFCAMC.NS",
+    "IDFCFIRSTB.NS","IRCTC.NS","JUBLFOOD.NS","KANSAINER.NS","LTTS.NS","MPHASIS.NS",
+    "OBEROIRLTY.NS","POLYCAB.NS","RAMCOCEM.NS","SAIL.NS","SUNTV.NS","TRENT.NS",
+    "UNITDSPR.NS","ZYDUSLIFE.NS"
 ]
 
 NIFTY_151_250 = [
     "AARTIIND.NS","ABBOTINDIA.NS","ACE.NS","ADANIPOWER.NS","AFFLE.NS",
-    "AJANTPHARM.NS","ALKYLAMINE.NS","AMARAJABAT.NS","ANGELONE.NS","APARINDS.NS",
-    "APLLTD.NS","BALAMINES.NS","BALKRISIND.NS","BASF.NS","BAYERCROP.NS",
-    "BDL.NS","BSOFT.NS","CAMS.NS","CANFINHOME.NS","CARBORUNIV.NS",
-    "CDSL.NS","CENTRALBK.NS","CERA.NS","CHALET.NS","CLEAN.NS",
-    "CONCOR.NS","CREDITACC.NS","CYIENT.NS","DATAPATTNS.NS","DCMSHRIRAM.NS",
-    "DELTACORP.NS","DEVYANI.NS","DIXON.NS","EASEMYTRIP.NS","ELGIEQUIP.NS",
-    "ENDURANCE.NS","EQUITASBNK.NS","FINEORG.NS","FORTIS.NS","FSL.NS",
-    "GESHIP.NS","GILLETTE.NS","GMMPFAUDLR.NS","GRANULES.NS","GUJGASLTD.NS",
-    "HAL.NS","HAPPSTMNDS.NS","HFCL.NS","IEX.NS","INDIAMART.NS",
-    "INTELLECT.NS","IRB.NS","IRFC.NS","JBCHEPHARM.NS","JSL.NS",
-    "KEC.NS","KEI.NS","KPITTECH.NS","LAXMIMACH.NS","MAHLOG.NS",
-    "MAHSCOOTER.NS","MCX.NS","METROPOLIS.NS","MGL.NS","NATCOPHARM.NS",
-    "NAVINFLUOR.NS","NBCC.NS","NESCO.NS","NIITLTD.NS","NUVOCO.NS",
-    "PFIZER.NS","PERSISTENT.NS","POLYMED.NS","RAIN.NS","RBLBANK.NS",
-    "RECLTD.NS","REDINGTON.NS","ROUTE.NS","SANOFI.NS","SCHAEFFLER.NS",
-    "SONATSOFTW.NS","SPANDANA.NS","STAR.NS","SUNDRMFAST.NS","SUPREMEIND.NS",
-    "SYNGENE.NS","TATAELXSI.NS","TATACHEM.NS","TATAPOWER.NS","TCIEXP.NS",
-    "THERMAX.NS","TIINDIA.NS","TORNTPOWER.NS","TRIDENT.NS","UCOBANK.NS",
-    "UNIONBANK.NS","VINATIORGA.NS","WHIRLPOOL.NS","ZENSARTECH.NS"
+    "AJANTPHARM.NS","ALKYLAMINE.NS","ANGELONE.NS","APARINDS.NS","BALAMINES.NS",
+    "BALKRISIND.NS","BAYERCROP.NS","BDL.NS","CAMS.NS","CANFINHOME.NS","CDSL.NS",
+    "CERA.NS","CHALET.NS","CONCOR.NS","CREDITACC.NS","CYIENT.NS","DCMSHRIRAM.NS",
+    "DIXON.NS","EASEMYTRIP.NS","ELGIEQUIP.NS","ENDURANCE.NS","FINEORG.NS",
+    "FORTIS.NS","GESHIP.NS","GMMPFAUDLR.NS","GRANULES.NS","HAL.NS",
+    "HAPPSTMNDS.NS","HFCL.NS","IEX.NS","INDIAMART.NS","INTELLECT.NS","IRFC.NS",
+    "KEI.NS","KPITTECH.NS","LAXMIMACH.NS","MCX.NS","METROPOLIS.NS","NAVINFLUOR.NS",
+    "NBCC.NS","PERSISTENT.NS","RECLTD.NS","ROUTE.NS","SCHAEFFLER.NS",
+    "SONATSOFTW.NS","SUNDRMFAST.NS","SUPREMEIND.NS","SYNGENE.NS","TATAELXSI.NS",
+    "TATAPOWER.NS","THERMAX.NS","TORNTPOWER.NS","VINATIORGA.NS","WHIRLPOOL.NS"
 ]
+
 INDEX_MAP = {
     "NIFTY 50": NIFTY_50,
     "NIFTY 51–100": NIFTY_NEXT_50,
@@ -88,7 +81,14 @@ def fetch_fundamentals(symbol):
     info = t.info
 
     return {
-        "Stock": symbol.replace(".NS", ""),
+        "Stock": symbol.replace(".NS",""),
+        "Symbol": symbol,
+        "Sector": info.get("sector"),
+        "CMP": info.get("currentPrice"),
+        "52W High": info.get("fiftyTwoWeekHigh"),
+        "52W Low": info.get("fiftyTwoWeekLow"),
+        "Dividend Yield %": (info.get("dividendYield") or 0) * 100,
+        "Face Value": info.get("faceValue"),
         "PE": info.get("trailingPE"),
         "PB": info.get("priceToBook"),
         "ROE": info.get("returnOnEquity"),
@@ -98,7 +98,7 @@ def fetch_fundamentals(symbol):
     }
 
 @st.cache_data(ttl=86400)
-def load_index_data(symbols):
+def load_data(symbols):
     data = []
     for s in symbols:
         try:
@@ -110,55 +110,122 @@ def load_index_data(symbols):
 # --------------------------------------------------
 # SCORING
 # --------------------------------------------------
-def score_stock(row):
-    score = 0
-    if row["PE"] and row["PE"] < SECTOR_PE_AVG: score += 2
-    if row["PB"] and row["PB"] < 3: score += 1
-    if row["ROE"] and row["ROE"] > 0.15: score += 2
-    if row["DebtEquity"] and row["DebtEquity"] < 0.5: score += 1
-    if row["RevenueGrowth"] and row["RevenueGrowth"] > 0.10: score += 2
-    if row["ProfitMargin"] and row["ProfitMargin"] > 0.10: score += 1
-    return score
+def score_stock(r):
+    s = 0
+    if r["PE"] and r["PE"] < SECTOR_PE_AVG: s += 2
+    if r["PB"] and r["PB"] < 3: s += 1
+    if r["ROE"] and r["ROE"] > 0.15: s += 2
+    if r["DebtEquity"] and r["DebtEquity"] < 0.5: s += 1
+    if r["RevenueGrowth"] and r["RevenueGrowth"] > 0.10: s += 2
+    if r["ProfitMargin"] and r["ProfitMargin"] > 0.10: s += 1
+    return s
 
-def valuation(score):
+def valuation_label(score):
     if score >= 7: return "Undervalued"
-    elif score >= 4: return "Neutral"
+    if score >= 4: return "Neutral"
     return "Overvalued"
+
+# --------------------------------------------------
+# FINANCIALS
+# --------------------------------------------------
+@st.cache_data(ttl=86400)
+def quarterly_financials(symbol):
+    t = yf.Ticker(symbol)
+    df = t.quarterly_financials.T.reset_index()
+    df.rename(columns={"index":"Quarter"}, inplace=True)
+
+    df["Sales"] = df["Total Revenue"]
+    df["Operating Profit"] = df["Operating Income"]
+    df["Net Profit"] = df["Net Income"]
+
+    df["OPM %"] = (df["Operating Profit"]/df["Sales"])*100
+    df["Net Margin %"] = (df["Net Profit"]/df["Sales"])*100
+    df["Sales YoY %"] = df["Sales"].pct_change(4)*100
+    df["Profit YoY %"] = df["Net Profit"].pct_change(4)*100
+
+    return df.sort_values("Quarter", ascending=False)
+
+@st.cache_data(ttl=86400)
+def annual_financials(symbol):
+    t = yf.Ticker(symbol)
+    df = t.financials.T.reset_index()
+    df.rename(columns={"index":"Year"}, inplace=True)
+
+    df["Sales"] = df["Total Revenue"]
+    df["Operating Profit"] = df["Operating Income"]
+    df["Net Profit"] = df["Net Income"]
+
+    df["OPM %"] = (df["Operating Profit"]/df["Sales"])*100
+    df["Net Margin %"] = (df["Net Profit"]/df["Sales"])*100
+
+    return df.sort_values("Year", ascending=False)
+
+# --------------------------------------------------
+# PDF EXPORT
+# --------------------------------------------------
+def generate_pdf(stock, row):
+    file = f"{stock}_report.pdf"
+    doc = SimpleDocTemplate(file)
+    styles = getSampleStyleSheet()
+    content = []
+
+    content.append(Paragraph(f"<b>{stock} Fundamental Report</b>", styles["Title"]))
+    content.append(Paragraph(f"CMP: ₹{row['CMP']}", styles["Normal"]))
+    content.append(Paragraph(f"Valuation: {row['Valuation']} (Score {row['Score']})", styles["Normal"]))
+    content.append(Paragraph(f"PE: {row['PE']} | ROE: {row['ROE']}", styles["Normal"]))
+
+    doc.build(content)
+    return file
 
 # --------------------------------------------------
 # UI
 # --------------------------------------------------
 st.title("📊 NIFTY Fundamental Valuation Dashboard")
 
-index_choice = st.sidebar.selectbox(
-    "Select Index",
-    list(INDEX_MAP.keys())
-)
+index_choice = st.sidebar.selectbox("Select Index", INDEX_MAP.keys())
 
-df = load_index_data(INDEX_MAP[index_choice])
+df = load_data(INDEX_MAP[index_choice])
 df["Score"] = df.apply(score_stock, axis=1)
-df["Valuation"] = df["Score"].apply(valuation)
+df["Valuation"] = df["Score"].apply(valuation_label)
 
 # KPIs
-c1, c2, c3 = st.columns(3)
-c1.metric("🟢 Undervalued", (df["Valuation"] == "Undervalued").sum())
-c2.metric("🟡 Neutral", (df["Valuation"] == "Neutral").sum())
-c3.metric("🔴 Overvalued", (df["Valuation"] == "Overvalued").sum())
+c1,c2,c3 = st.columns(3)
+c1.metric("🟢 Undervalued", (df["Valuation"]=="Undervalued").sum())
+c2.metric("🟡 Neutral", (df["Valuation"]=="Neutral").sum())
+c3.metric("🔴 Overvalued", (df["Valuation"]=="Overvalued").sum())
 
-# Pie
-fig = px.pie(df, names="Valuation", hole=0.4, title="Valuation Distribution")
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(px.pie(df, names="Valuation", hole=0.4), use_container_width=True)
 
-# Table
 st.subheader("🔎 Stock Screener")
 st.dataframe(df.sort_values("Score", ascending=False), use_container_width=True)
 
-# Stock Detail
 st.subheader("📈 Stock Details")
 stock = st.selectbox("Select Stock", df["Stock"])
-row = df[df["Stock"] == stock].iloc[0]
+row = df[df["Stock"]==stock].iloc[0]
 
-st.write(row)
+k1,k2,k3,k4 = st.columns(4)
+k1.metric("CMP", f"₹ {row['CMP']}")
+k2.metric("52W High", f"₹ {row['52W High']}")
+k3.metric("52W Low", f"₹ {row['52W Low']}")
+k4.metric("Dividend Yield", f"{row['Dividend Yield %']:.2f}%")
+
 st.success(f"Valuation: **{row['Valuation']}** | Score: **{row['Score']}**")
+
+tab1,tab2,tab3 = st.tabs(["Quarterly Results","Annual Results","Peer Comparison"])
+
+with tab1:
+    st.dataframe(quarterly_financials(row["Symbol"]), use_container_width=True)
+
+with tab2:
+    st.dataframe(annual_financials(row["Symbol"]), use_container_width=True)
+
+with tab3:
+    peers = df[df["Sector"]==row["Sector"]][["Stock","CMP","PE","ROE","DebtEquity"]]
+    st.dataframe(peers.sort_values("ROE", ascending=False), use_container_width=True)
+
+if st.button("📄 Download PDF Report"):
+    pdf = generate_pdf(stock, row)
+    with open(pdf,"rb") as f:
+        st.download_button("Download", f, file_name=pdf)
 
 st.caption("⚠️ Educational purpose only. Not investment advice.")
