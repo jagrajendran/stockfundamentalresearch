@@ -7,16 +7,54 @@ import plotly.express as px
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
-st.set_page_config(page_title="NSE Fundamental Valuation Dashboard",
+st.set_page_config(page_title="NIFTY Fundamental Valuation Dashboard",
                    layout="wide")
 
-NSE_STOCKS = [
-    "TCS.NS", "INFY.NS", "HDFCBANK.NS", "RELIANCE.NS",
-    "ICICIBANK.NS", "ITC.NS", "LT.NS", "SBIN.NS",
-    "HINDUNILVR.NS", "BHARTIARTL.NS"
+SECTOR_PE_AVG = 25
+
+# --------------------------------------------------
+# NSE INDEX STOCK LISTS
+# --------------------------------------------------
+NIFTY_50 = [
+    "ADANIENT.NS","ADANIPORTS.NS","APOLLOHOSP.NS","ASIANPAINT.NS","AXISBANK.NS",
+    "BAJAJ-AUTO.NS","BAJFINANCE.NS","BAJAJFINSV.NS","BPCL.NS","BHARTIARTL.NS",
+    "BRITANNIA.NS","CIPLA.NS","COALINDIA.NS","DIVISLAB.NS","DRREDDY.NS",
+    "EICHERMOT.NS","GRASIM.NS","HCLTECH.NS","HDFCBANK.NS","HDFCLIFE.NS",
+    "HEROMOTOCO.NS","HINDALCO.NS","HINDUNILVR.NS","ICICIBANK.NS","ITC.NS",
+    "INDUSINDBK.NS","INFY.NS","JSWSTEEL.NS","KOTAKBANK.NS","LT.NS",
+    "M&M.NS","MARUTI.NS","NTPC.NS","ONGC.NS","POWERGRID.NS",
+    "RELIANCE.NS","SBIN.NS","SUNPHARMA.NS","TCS.NS","TATACONSUM.NS",
+    "TATAMOTORS.NS","TATASTEEL.NS","TECHM.NS","TITAN.NS","ULTRACEMCO.NS",
+    "UPL.NS","WIPRO.NS"
 ]
 
-SECTOR_PE_AVG = 25   # Simple assumption (can enhance later)
+NIFTY_NEXT_50 = [
+    "ABB.NS","ACC.NS","ADANIGREEN.NS","ADANITRANS.NS","AMBUJACEM.NS",
+    "AUBANK.NS","BANDHANBNK.NS","BERGEPAINT.NS","BOSCHLTD.NS","CANBK.NS",
+    "CHOLAFIN.NS","COLPAL.NS","DLF.NS","GAIL.NS","GODREJCP.NS",
+    "HAVELLS.NS","ICICIPRULI.NS","IGL.NS","INDIGO.NS","JINDALSTEL.NS",
+    "LICHSGFIN.NS","LUPIN.NS","MARICO.NS","MOTHERSUMI.NS","NMDC.NS",
+    "OFSS.NS","PAGEIND.NS","PETRONET.NS","PIDILITIND.NS","PNB.NS",
+    "SIEMENS.NS","SRF.NS","TORNTPHARM.NS","TVSMOTOR.NS","UBL.NS",
+    "VEDL.NS","VOLTAS.NS","ZEEL.NS"
+]
+
+NIFTY_101_150 = [
+    "ABFRL.NS","ALKEM.NS","ASHOKLEY.NS","ASTRAL.NS","ATUL.NS",
+    "AUROPHARMA.NS","BATAINDIA.NS","BEL.NS","BHARATFORG.NS","BIRLACORPN.NS",
+    "CESC.NS","COFORGE.NS","COROMANDEL.NS","CROMPTON.NS","DEEPAKNTR.NS",
+    "ESCORTS.NS","EXIDEIND.NS","FEDERALBNK.NS","GLENMARK.NS","GNFC.NS",
+    "HDFCAMC.NS","IDFCFIRSTB.NS","IPCALAB.NS","IRCTC.NS","JUBLFOOD.NS",
+    "KANSAINER.NS","LALPATHLAB.NS","LTTS.NS","MFSL.NS","MPHASIS.NS",
+    "NAM-INDIA.NS","OBEROIRLTY.NS","POLYCAB.NS","PRESTIGE.NS","RAMCOCEM.NS",
+    "SAIL.NS","SUNTV.NS","TRENT.NS","UNITDSPR.NS","ZYDUSLIFE.NS"
+]
+
+INDEX_MAP = {
+    "NIFTY 50": NIFTY_50,
+    "NIFTY 51–100": NIFTY_NEXT_50,
+    "NIFTY 101–150": NIFTY_101_150
+}
 
 # --------------------------------------------------
 # DATA FETCH
@@ -32,136 +70,72 @@ def fetch_fundamentals(symbol):
         "PB": info.get("priceToBook"),
         "ROE": info.get("returnOnEquity"),
         "DebtEquity": info.get("debtToEquity"),
-        "MarketCap": info.get("marketCap"),
         "RevenueGrowth": info.get("revenueGrowth"),
-        "ProfitMargins": info.get("profitMargins")
+        "ProfitMargin": info.get("profitMargins")
     }
 
 @st.cache_data(ttl=86400)
-def load_data():
-    rows = []
-    for s in NSE_STOCKS:
+def load_index_data(symbols):
+    data = []
+    for s in symbols:
         try:
-            rows.append(fetch_fundamentals(s))
+            data.append(fetch_fundamentals(s))
         except:
             pass
-    return pd.DataFrame(rows)
+    return pd.DataFrame(data)
 
 # --------------------------------------------------
-# SCORING LOGIC
+# SCORING
 # --------------------------------------------------
-def calculate_score(row):
+def score_stock(row):
     score = 0
-
-    if row["PE"] and row["PE"] < SECTOR_PE_AVG:
-        score += 2
-    if row["PB"] and row["PB"] < 3:
-        score += 1
-    if row["ROE"] and row["ROE"] > 0.15:
-        score += 2
-    if row["DebtEquity"] and row["DebtEquity"] < 0.5:
-        score += 1
-    if row["RevenueGrowth"] and row["RevenueGrowth"] > 0.10:
-        score += 2
-    if row["ProfitMargins"] and row["ProfitMargins"] > 0.10:
-        score += 1
-
+    if row["PE"] and row["PE"] < SECTOR_PE_AVG: score += 2
+    if row["PB"] and row["PB"] < 3: score += 1
+    if row["ROE"] and row["ROE"] > 0.15: score += 2
+    if row["DebtEquity"] and row["DebtEquity"] < 0.5: score += 1
+    if row["RevenueGrowth"] and row["RevenueGrowth"] > 0.10: score += 2
+    if row["ProfitMargin"] and row["ProfitMargin"] > 0.10: score += 1
     return score
 
-def valuation_label(score):
-    if score >= 7:
-        return "Undervalued"
-    elif score >= 4:
-        return "Neutral"
-    else:
-        return "Overvalued"
+def valuation(score):
+    if score >= 7: return "Undervalued"
+    elif score >= 4: return "Neutral"
+    return "Overvalued"
 
 # --------------------------------------------------
-# MAIN
+# UI
 # --------------------------------------------------
-st.title("📊 NSE Fundamental Valuation Dashboard")
-st.caption("Rule-based fundamental valuation | Long-term investing")
+st.title("📊 NIFTY Fundamental Valuation Dashboard")
 
-df = load_data()
+index_choice = st.sidebar.selectbox(
+    "Select Index",
+    list(INDEX_MAP.keys())
+)
 
-if df.empty:
-    st.error("No data fetched.")
-    st.stop()
+df = load_index_data(INDEX_MAP[index_choice])
+df["Score"] = df.apply(score_stock, axis=1)
+df["Valuation"] = df["Score"].apply(valuation)
 
-df["Score"] = df.apply(calculate_score, axis=1)
-df["Valuation"] = df["Score"].apply(valuation_label)
-
-# --------------------------------------------------
 # KPIs
-# --------------------------------------------------
-col1, col2, col3 = st.columns(3)
+c1, c2, c3 = st.columns(3)
+c1.metric("🟢 Undervalued", (df["Valuation"] == "Undervalued").sum())
+c2.metric("🟡 Neutral", (df["Valuation"] == "Neutral").sum())
+c3.metric("🔴 Overvalued", (df["Valuation"] == "Overvalued").sum())
 
-col1.metric("🟢 Undervalued",
-             df[df["Valuation"] == "Undervalued"].shape[0])
-
-col2.metric("🟡 Neutral",
-             df[df["Valuation"] == "Neutral"].shape[0])
-
-col3.metric("🔴 Overvalued",
-             df[df["Valuation"] == "Overvalued"].shape[0])
-
-# --------------------------------------------------
-# PIE CHART
-# --------------------------------------------------
-fig = px.pie(df,
-             names="Valuation",
-             title="Valuation Distribution",
-             hole=0.4)
-
+# Pie
+fig = px.pie(df, names="Valuation", hole=0.4, title="Valuation Distribution")
 st.plotly_chart(fig, use_container_width=True)
 
-# --------------------------------------------------
-# FILTERS
-# --------------------------------------------------
+# Table
 st.subheader("🔎 Stock Screener")
+st.dataframe(df.sort_values("Score", ascending=False), use_container_width=True)
 
-valuation_filter = st.multiselect(
-    "Select Valuation",
-    options=df["Valuation"].unique(),
-    default=df["Valuation"].unique()
-)
-
-filtered_df = df[df["Valuation"].isin(valuation_filter)]
-
-# --------------------------------------------------
-# TABLE
-# --------------------------------------------------
-st.dataframe(
-    filtered_df.sort_values("Score", ascending=False),
-    use_container_width=True
-)
-
-# --------------------------------------------------
-# STOCK DETAIL VIEW
-# --------------------------------------------------
-st.subheader("📈 Stock Detail")
-
+# Stock Detail
+st.subheader("📈 Stock Details")
 stock = st.selectbox("Select Stock", df["Stock"])
+row = df[df["Stock"] == stock].iloc[0]
 
-stock_row = df[df["Stock"] == stock].iloc[0]
+st.write(row)
+st.success(f"Valuation: **{row['Valuation']}** | Score: **{row['Score']}**")
 
-metrics_df = pd.DataFrame({
-    "Metric": ["PE", "PB", "ROE", "Debt/Equity", "Revenue Growth", "Profit Margin"],
-    "Value": [
-        stock_row["PE"],
-        stock_row["PB"],
-        stock_row["ROE"],
-        stock_row["DebtEquity"],
-        stock_row["RevenueGrowth"],
-        stock_row["ProfitMargins"]
-    ]
-})
-
-st.table(metrics_df)
-
-st.success(f"**Valuation:** {stock_row['Valuation']} | **Score:** {stock_row['Score']}")
-
-# --------------------------------------------------
-# FOOTER
-# --------------------------------------------------
-st.caption("⚠️ Educational purpose only. Not financial advice.")
+st.caption("⚠️ Educational purpose only. Not investment advice.")
